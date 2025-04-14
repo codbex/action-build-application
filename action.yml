@@ -1,5 +1,5 @@
-name: codbex - Build Modules
-description: Build NPM packages from an application model
+name: codbex - Build Application
+description: Build application from NPM packages
 author: codbex
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
@@ -9,9 +9,24 @@ branding:
 
 # Define your inputs here.
 inputs:
-    packages-build:
-        description: List of package paths to build
+    application-name:
+        description: The application name
         required: true
+    docker-username:
+        description: The Docker Username
+        required: true
+    docker-password:
+        description: The Docker Password
+        required: true
+    docker-organization:
+        description: The Docker Organization
+        required: true
+    dockerfile-location:
+        description: The Dockerfile location
+        default: ./
+    install-dependencies:
+        description: Whether to install NPM dependencies
+        default: 'true'
     npmrc:
         description: .npmrc config file content
         required: false

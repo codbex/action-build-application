@@ -27265,6 +27265,9 @@ class InputUtils {
     static getInput(name) {
         return coreExports.getInput(name);
     }
+    static getBooleanInput(name) {
+        return coreExports.getBooleanInput(name);
+    }
     static getArrayInput(name) {
         return coreExports.getMultilineInput(name).map((e) => {
             if (e.startsWith('-')) {
@@ -27275,14 +27278,19 @@ class InputUtils {
     }
 }
 
-const errorToken = `[91merror[0m[90m TS`;
-const ignoreError = `[91merror[0m[90m TS2688: [0mCannot find type definition file for '../modules/types'.`;
+// const errorToken = `[91merror[0m[90m TS`;
+// const ignoreError = `[91merror[0m[90m TS2688: [0mCannot find type definition file for '../modules/types'.`;
 async function run() {
     try {
-        const buildPackages = InputUtils.getArrayInput('packages-build');
+        const applicationName = InputUtils.getInput('application-name');
+        const dockerfileLocation = InputUtils.getInput('dockerfile-location');
+        const dockerUsername = InputUtils.getInput('docker-username');
+        const dockerPassword = InputUtils.getInput('docker-password');
+        const dockerOrganization = InputUtils.getInput('docker-organization');
+        const installDependencies = InputUtils.getBooleanInput('install-dependencies');
         const npmrc = InputUtils.getInput('npmrc');
-        for (const nextPackage of buildPackages) {
-            const fullPath = require$$1$5.resolve(nextPackage);
+        const fullPath = require$$1$5.resolve(dockerfileLocation);
+        if (installDependencies) {
             if (npmrc) {
                 ExecutionUtils.run(`echo "${npmrc}" > .npmrc`, fullPath, 'Creating .npmrc');
             }
@@ -27290,13 +27298,18 @@ async function run() {
             if (npmrc) {
                 ExecutionUtils.run(`rm -rf .npmrc`, fullPath, 'Removing .npmrc');
             }
-            try {
-                ExecutionUtils.run('tsc --pretty', fullPath, 'Compiling TypeScript');
-            }
-            catch (e) {
-                ignoreKnownErrors(e);
-            }
         }
+        // try {
+        coreExports.startGroup('Build and Push Docker Image');
+        ExecutionUtils.run('docker buildx create --name codbex-builder', fullPath);
+        ExecutionUtils.run('docker buildx use codbex-builder', fullPath);
+        ExecutionUtils.run(`docker buildx build --tag ${applicationName} -o type=image --platform=linux/arm64,linux/amd64 .`, fullPath);
+        ExecutionUtils.run(`docker login ghcr.io -u ${dockerUsername} -p ${dockerPassword}`, fullPath);
+        ExecutionUtils.run(`docker buildx build --push --tag ghcr.io/${dockerOrganization}/${applicationName}:latest -o type=image --platform=linux/arm64,linux/amd64 .`, fullPath);
+        coreExports.endGroup();
+        // } catch (e: unknown) {
+        //     ignoreKnownErrors(e as ExecException);
+        // }
     }
     catch (error) {
         if (error instanceof Error) {
@@ -27304,19 +27317,19 @@ async function run() {
         }
     }
 }
-function ignoreKnownErrors(e) {
-    let errors = e.stdout;
-    if (errors) {
-        errors = errors?.replaceAll(ignoreError, '');
-    }
-    if (!errors || errors.includes(errorToken)) {
-        coreExports.error(e.message);
-        coreExports.error(e.stdout ?? '');
-        coreExports.error(e.stderr ?? '');
-        throw e;
-    }
-    coreExports.warning('Ignoring codbex "sdk" related errors');
-}
+// function ignoreKnownErrors(e: ExecException) {
+//     let errors = e.stdout;
+//     if (errors) {
+//         errors = errors?.replaceAll(ignoreError, '');
+//     }
+//     if (!errors || errors.includes(errorToken)) {
+//         core.error(e.message);
+//         core.error(e.stdout ?? '');
+//         core.error(e.stderr ?? '');
+//         throw e;
+//     }
+//     core.warning('Ignoring codbex "sdk" related errors');
+// }
 
 /**
  * The entrypoint for the action. This file simply imports and runs the action's
