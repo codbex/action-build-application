@@ -27278,38 +27278,29 @@ class InputUtils {
     }
 }
 
-// const errorToken = `[91merror[0m[90m TS`;
-// const ignoreError = `[91merror[0m[90m TS2688: [0mCannot find type definition file for '../modules/types'.`;
 async function run() {
     try {
-        const applicationName = InputUtils.getInput('application-name');
+        const name = InputUtils.getInput('name');
+        const tag = InputUtils.getInput('tag');
+        const installDependencies = InputUtils.getBooleanInput('install-dependencies');
         const dockerfileLocation = InputUtils.getInput('dockerfile-location');
+        const npmrc = InputUtils.getInput('npmrc');
         const dockerUsername = InputUtils.getInput('docker-username');
         const dockerPassword = InputUtils.getInput('docker-password');
         const dockerOrganization = InputUtils.getInput('docker-organization');
-        const installDependencies = InputUtils.getBooleanInput('install-dependencies');
-        const npmrc = InputUtils.getInput('npmrc');
         const fullPath = require$$1$5.resolve(dockerfileLocation);
         if (installDependencies) {
-            if (npmrc) {
-                ExecutionUtils.run(`echo "${npmrc}" > .npmrc`, fullPath, 'Creating .npmrc');
-            }
-            ExecutionUtils.run('npm install', fullPath, 'Installing NPM dependencies');
-            if (npmrc) {
-                ExecutionUtils.run(`rm -rf .npmrc`, fullPath, 'Removing .npmrc');
-            }
+            installNpmDependencies(npmrc, fullPath);
         }
-        // try {
         coreExports.startGroup('Build and Push Docker Image');
         ExecutionUtils.run('docker buildx create --name codbex-builder', fullPath);
         ExecutionUtils.run('docker buildx use codbex-builder', fullPath);
-        ExecutionUtils.run(`docker buildx build --tag ${applicationName} -o type=image --platform=linux/arm64,linux/amd64 .`, fullPath);
-        ExecutionUtils.run(`docker login ghcr.io -u ${dockerUsername} -p ${dockerPassword}`, fullPath);
-        ExecutionUtils.run(`docker buildx build --push --tag ghcr.io/${dockerOrganization}/${applicationName}:latest -o type=image --platform=linux/arm64,linux/amd64 .`, fullPath);
+        ExecutionUtils.run(`docker buildx build --tag ${name} -o type=image --platform=linux/arm64,linux/amd64 .`, fullPath);
+        if (dockerUsername && dockerPassword && dockerOrganization) {
+            ExecutionUtils.run(`docker login ghcr.io -u ${dockerUsername} -p ${dockerPassword}`, fullPath);
+            ExecutionUtils.run(`docker buildx build --push --tag ghcr.io/${dockerOrganization}/${name}:${tag} -o type=image --platform=linux/arm64,linux/amd64 .`, fullPath);
+        }
         coreExports.endGroup();
-        // } catch (e: unknown) {
-        //     ignoreKnownErrors(e as ExecException);
-        // }
     }
     catch (error) {
         if (error instanceof Error) {
@@ -27317,19 +27308,15 @@ async function run() {
         }
     }
 }
-// function ignoreKnownErrors(e: ExecException) {
-//     let errors = e.stdout;
-//     if (errors) {
-//         errors = errors?.replaceAll(ignoreError, '');
-//     }
-//     if (!errors || errors.includes(errorToken)) {
-//         core.error(e.message);
-//         core.error(e.stdout ?? '');
-//         core.error(e.stderr ?? '');
-//         throw e;
-//     }
-//     core.warning('Ignoring codbex "sdk" related errors');
-// }
+function installNpmDependencies(npmrc, fullPath) {
+    if (npmrc) {
+        ExecutionUtils.run(`echo "${npmrc}" > .npmrc`, fullPath, 'Creating .npmrc');
+    }
+    ExecutionUtils.run('npm install', fullPath, 'Installing NPM dependencies');
+    if (npmrc) {
+        ExecutionUtils.run(`rm -rf .npmrc`, fullPath, 'Removing .npmrc');
+    }
+}
 
 /**
  * The entrypoint for the action. This file simply imports and runs the action's

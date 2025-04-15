@@ -9,27 +9,27 @@ branding:
 
 # Define your inputs here.
 inputs:
-    application-name:
+    name:
         description: The application name
         required: true
-    docker-username:
-        description: The Docker Username
-        required: true
-    docker-password:
-        description: The Docker Password
-        required: true
-    docker-organization:
-        description: The Docker Organization
-        required: true
-    dockerfile-location:
-        description: The Dockerfile location
-        default: ./
+    tag:
+        description: The application tag
+        default: latest
     install-dependencies:
         description: Whether to install NPM dependencies
         default: 'true'
+    dockerfile-location:
+        description: The Dockerfile location
+        default: ./
     npmrc:
         description: .npmrc config file content
         required: false
+    docker-username:
+        description: The Docker Username
+    docker-password:
+        description: The Docker Password
+    docker-organization:
+        description: The Docker Organization
 
 runs:
     using: node20
